@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+generator erd {
+  provider = "prisma-erd-generator"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Pool {
+  id       String   @id @default(cuid()) //indica para o prisma que essa será a primary key
+  title    String
+  code     String   @unique //faz com que não sejam inseridos dois bolões com o mesmo código
+  createAt DateTime @default(now())
+  ownerId  String?
+
+  participants Participant[]
+  owner        User?         @relation(fields: [ownerId], references: [id])
+}
+
+model Participant {
+  id     String @id @default(cuid())
+  userId String //nunca se repetirá tanto o userId quanto o poolId, pois, um usuário nunca irá particiar mais de uma vez de um mesmo bolão
+  poolId String //nunca se repetirá tanto o userId quanto o poolId, pois, um usuário nunca irá particiar mais de uma vez de um mesmo bolão
+
+  guesses Guess[]
+  user    User    @relation(fields: [userId], references: [id])
+  pool    Pool    @relation(fields: [poolId], references: [id])
+
+  @@unique([userId, poolId])
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  avatarUrl String?
+  createdAt DateTime @default(now())
+
+  participatingAt Participant[] //os usuários estão participando em vários bolões
+  ownPools        Pool[] //são os bolões que o usuário é dono
+}
+
+model Game {
+  id   String   @id @default(cuid())
+  date DateTime
+
+  firstTeamCountryCode  String
+  secondTeamCountryCode String
+
+  guesses Guess[] //não é uma coluna no banco de dados
+}
+
+model Guess {
+  id String @id @default(cuid())
+
+  firstTeamPoints  Int
+  secondTeamPoints Int
+  createdAt        DateTime @default(now())
+  gameId           String
+  participantId    String
+
+  participant Participant @relation(fields: [participantId], references: [id])
+  game        Game        @relation(fields: [gameId], references: [id])
+}
